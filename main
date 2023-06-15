@@ -1,0 +1,61 @@
+from flask import Flask, render_template, request, redirect, session
+from datetime import datetime
+
+app = Flask(__name__)
+app.secret_key = 'YOUR_SECRET_KEY'
+
+# 用于存储用户任务的字典
+tasks = {}
+
+@app.route('/')
+def index():
+    if 'username' in session:
+        username = session['username']
+        user_tasks = tasks.get(username, [])
+        return render_template('index.html', username=username, tasks=user_tasks)
+    else:
+        return redirect('/login')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        session['username'] = username
+        return redirect('/')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect('/login')
+
+@app.route('/add', methods=['POST'])
+def add():
+    if 'username' in session:
+        username = session['username']
+        task = request.form.get('task')
+        if username not in tasks:
+            tasks[username] = []
+        tasks[username].append({'task': task, 'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+    return redirect('/')
+
+@app.route('/complete', methods=['POST'])
+def complete():
+    if 'username' in session:
+        username = session['username']
+        task_index = int(request.form.get('task_index'))
+        if username in tasks and task_index < len(tasks[username]):
+            tasks[username][task_index]['completed'] = True
+    return redirect('/')
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    if 'username' in session:
+        username = session['username']
+        task_index = int(request.form.get('task_index'))
+        if username in tasks and task_index < len(tasks[username]):
+            del tasks[username][task_index]
+    return redirect('/')
+
+if __name__ == '__main__':
+    app.run(debug=True)
